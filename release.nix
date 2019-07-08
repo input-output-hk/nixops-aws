@@ -1,4 +1,4 @@
-{ nixopsSrc ? { outPath = ./.; revCount = 0; shortRev = "awsjal"; rev = "HEAD"; }
+{ nixopsSrc ? { outPath = ./.; revCount = 0; shortRev = "abcdef"; rev = "HEAD"; }
 , officialRelease ? false
 , nixpkgs ? <nixpkgs>
 }:
