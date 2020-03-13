@@ -69,8 +69,8 @@ class CloudWatchLogGroupState(nixops.resources.ResourceState):
         self.connect()
         self.log("destroying cloudwatch log group ‘{0}’...".format(self.log_group_name))
         try:
-         self._conn.delete_log_group(self.log_group_name)
-        except  boto.logs.exceptions.ResourceNotFoundException, e:
+            self._conn.delete_log_group(self.log_group_name)
+        except boto.logs.exceptions.ResourceNotFoundException as e:
             self.log("the log group ‘{0}’ was already deleted".format(self.log_group_name))
         with self.depl._db:
             self.state = self.MISSING
