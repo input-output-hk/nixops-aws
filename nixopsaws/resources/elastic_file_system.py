@@ -8,8 +8,8 @@ import botocore
 import nixops.util
 import nixopsaws.ec2_utils
 import nixops.resources
-import ec2_common
-import efs_common
+from . import ec2_common
+from . import efs_common
 import time
 
 class ElasticFileSystemDefinition(nixops.resources.ResourceDefinition):

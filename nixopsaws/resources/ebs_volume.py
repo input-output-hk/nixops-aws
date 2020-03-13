@@ -8,7 +8,7 @@ import nixops.util
 import nixopsaws.ec2_utils
 import nixops.resources
 import botocore.exceptions
-import ec2_common
+from . import ec2_common
 
 
 class EBSVolumeDefinition(nixops.resources.ResourceDefinition):
