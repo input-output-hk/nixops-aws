@@ -8,7 +8,7 @@ def nixexprs():
     if not os.path.exists(expr_path):
         expr_path = os.path.realpath(os.path.dirname(__file__) + "/../../../../../share/nix/nixops-aws")
     if not os.path.exists(expr_path):
-        expr_path = os.path.dirname(__file__) + "/../nix"
+        expr_path = os.path.realpath(os.path.dirname(__file__) + "/../nix")
 
     return [
         expr_path
