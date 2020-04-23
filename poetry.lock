@@ -105,10 +105,9 @@ PrettyTable = "^0.7.2"
 pluggy = "^0.13.1"
 
 [package.source]
-reference = "5a6c1f9d40ac8b7b0aa75b56e60fad8cf24f8a33"
+reference = "9d343be645b296228a557868d431e14e7c64e73e"
 type = "git"
 url = "https://github.com/input-output-hk/nixops.git"
-
 [[package]]
 category = "dev"
 description = "nose extends unittest to make testing easier"
