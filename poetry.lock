@@ -105,7 +105,7 @@ PrettyTable = "^0.7.2"
 pluggy = "^0.13.1"
 
 [package.source]
-reference = "9d343be645b296228a557868d431e14e7c64e73e"
+reference = "ff7c5fea225425161188b54cf2b86da8a955e0e0"
 type = "git"
 url = "https://github.com/input-output-hk/nixops.git"
 [[package]]
