@@ -6,5 +6,5 @@ let
 
 in pkgs.poetry2nix.mkPoetryApplication {
   projectDir = ./.;
-  overrides = pkgs.poetry2nix.overrides.withDefaults(overrides);
+  overrides = pkgs.poetry2nix.overrides.withDefaults overrides;
 }

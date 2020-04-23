@@ -7,9 +7,13 @@ self: super: {
     ];
   });
 
-  nixops = super.nixops.overridePythonAttrs(old: {
-    nativeBuildInputs = old.nativeBuildInputs ++ [
-      self.poetry
-    ];
-  });
+  nixops = super.nixops.overridePythonAttrs (
+    old: {
+      format = "pyproject";
+
+      nativeBuildInputs = old.nativeBuildInputs ++ [
+        self.poetry
+      ];
+    }
+  );
 }
