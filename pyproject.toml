@@ -9,14 +9,14 @@ license = "LGPL-3.0-only"
 python = "^3.7"
 boto = "^2.49.0"
 boto3 = "^1.12.19"
-nixops = {git = "https://github.com/adisbladis/nixops.git", rev = "poetry2nix-plugins"}
+nixops = {git = "https://github.com/input-output-hk/nixops.git", branch = "plugination"}
 
 [tool.poetry.dev-dependencies]
 nose = "^1.3.7"
 mypy = "^0.770"
 
 [tool.poetry.plugins."nixops"]
-aws = "nixopsaws.plugin:load"
+aws = "nixopsaws.plugin"
 
 [build-system]
 requires = ["poetry>=0.12"]

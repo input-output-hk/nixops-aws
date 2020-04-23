@@ -105,9 +105,9 @@ PrettyTable = "^0.7.2"
 pluggy = "^0.13.1"
 
 [package.source]
-reference = "730a58d82cf38659cad115f849923b34630b5eee"
+reference = "898175ac403a7896fe62c0ac794728943c58bdaf"
 type = "git"
-url = "https://github.com/adisbladis/nixops.git"
+url = "https://github.com/input-output-hk/nixops.git"
 [[package]]
 category = "dev"
 description = "nose extends unittest to make testing easier"
@@ -214,7 +214,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "5fdec44c731b0e35a94cfbbadb0fa83eff8792fe544ebd1e8274b0ee7513ba4c"
+content-hash = "4f513846716d58669c84a2177daffa4a4b15c7c560ac4a7600dd7b62ad0c662b"
 python-versions = "^3.7"
 
 [metadata.files]
