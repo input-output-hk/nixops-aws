@@ -6,4 +6,10 @@ self: super: {
       self.toml
     ];
   });
+
+  nixops = super.nixops.overridePythonAttrs(old: {
+    nativeBuildInputs = old.nativeBuildInputs ++ [
+      self.poetry
+    ];
+  });
 }
