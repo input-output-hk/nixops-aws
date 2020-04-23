@@ -105,7 +105,7 @@ PrettyTable = "^0.7.2"
 pluggy = "^0.13.1"
 
 [package.source]
-reference = "898175ac403a7896fe62c0ac794728943c58bdaf"
+reference = "245e2a0fa9e73e152f399685a00f13cf083d5ab4"
 type = "git"
 url = "https://github.com/input-output-hk/nixops.git"
 [[package]]
@@ -214,7 +214,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "4f513846716d58669c84a2177daffa4a4b15c7c560ac4a7600dd7b62ad0c662b"
+content-hash = "32e1a5c92b6217839f86af77d1bed7b93d4f1d5a7542acdaef1b224e45b001d4"
 python-versions = "^3.7"
 
 [metadata.files]

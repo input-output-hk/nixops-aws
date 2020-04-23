@@ -6,11 +6,4 @@ self: super: {
       self.toml
     ];
   });
-
-  nixops = super.zipp.overridePythonAttrs(old: {
-    nativeBuildInputs = old.nativeBuildInputs ++ [
-      self.poetry
-    ];
-  });
-
 }
