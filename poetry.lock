@@ -12,10 +12,10 @@ description = "The AWS SDK for Python"
 name = "boto3"
 optional = false
 python-versions = "*"
-version = "1.12.44"
+version = "1.12.45"
 
 [package.dependencies]
-botocore = ">=1.15.44,<1.16.0"
+botocore = ">=1.15.45,<1.16.0"
 jmespath = ">=0.7.1,<1.0.0"
 s3transfer = ">=0.3.0,<0.4.0"
 
@@ -25,7 +25,7 @@ description = "Low-level, data-driven core of boto 3."
 name = "botocore"
 optional = false
 python-versions = "*"
-version = "1.15.44"
+version = "1.15.45"
 
 [package.dependencies]
 docutils = ">=0.10,<0.16"
@@ -105,7 +105,7 @@ PrettyTable = "^0.7.2"
 pluggy = "^0.13.1"
 
 [package.source]
-reference = "d3950771aff59c4d86993c63d96e91feda76156d"
+reference = "b274f8edd777858eedb72d58bb58620682db030e"
 type = "git"
 url = "https://github.com/input-output-hk/nixops.git"
 [[package]]
@@ -223,12 +223,12 @@ boto = [
     {file = "boto-2.49.0.tar.gz", hash = "sha256:ea0d3b40a2d852767be77ca343b58a9e3a4b00d9db440efb8da74b4e58025e5a"},
 ]
 boto3 = [
-    {file = "boto3-1.12.44-py2.py3-none-any.whl", hash = "sha256:91af98b5bd555afacb7abe8afd7ed615e94c6d747e3f50588943b99a5a49789c"},
-    {file = "boto3-1.12.44.tar.gz", hash = "sha256:2186fca030ec6a4b00c5def1d7b86346da10eef41ae17b18f912621016f9196e"},
+    {file = "boto3-1.12.45-py2.py3-none-any.whl", hash = "sha256:daa371c7d4addeba77c9c84ff847c598a7af26de6a0a101c7ba040c376d55fc5"},
+    {file = "boto3-1.12.45.tar.gz", hash = "sha256:100863bbf7685a41b5f5647211a1e613fdb0c2fc05541de651859a9ad96c418a"},
 ]
 botocore = [
-    {file = "botocore-1.15.44-py2.py3-none-any.whl", hash = "sha256:c08d2ae350b48fbdbb01d34915859c19ef702a244ddc1a71b5c369183b9e4f65"},
-    {file = "botocore-1.15.44.tar.gz", hash = "sha256:fcb84381f6fa2d8f96e2647bc059790b1a5a9ce0d00a5296ffe0946bdee15802"},
+    {file = "botocore-1.15.45-py2.py3-none-any.whl", hash = "sha256:5540477cecdc6b86c5659b747ddc5e8bfde8b722fa3e3ddd909a2b4c57864d74"},
+    {file = "botocore-1.15.45.tar.gz", hash = "sha256:036183d917429a7145b031c55e7c1b9ea24f0d034fc612669963e8a78e662d74"},
 ]
 docutils = [
     {file = "docutils-0.15.2-py2-none-any.whl", hash = "sha256:9e4d7ecfc600058e07ba661411a2b7de2fd0fafa17d1a7f7361cd47b1175c827"},
