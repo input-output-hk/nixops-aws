@@ -22,6 +22,7 @@ import nixops.known_hosts
 from xml import etree
 import datetime
 import boto3
+from functools import cmp_to_key
 
 class EC2InstanceDisappeared(Exception):
     pass
@@ -1320,7 +1321,7 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
             raise Exception('hosted zone for {0} not found'.format(hosted_zone))
 
         # use hosted zone with longest match
-        zones = sorted(zones, cmp=lambda a, b: cmp(len(a.Name), len(b.Name)), reverse=True)
+        zones = sorted(zones, key=cmp_to_key(lambda a, b: cmp(len(a.Name), len(b.Name))), reverse=True)
         zoneid = zones[0]['Id'].split("/")[2]
         dns_name = '{0}.'.format(self.dns_hostname)
 
