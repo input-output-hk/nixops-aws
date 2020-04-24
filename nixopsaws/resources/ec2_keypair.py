@@ -100,7 +100,7 @@ class EC2KeyPairState(nixops.resources.ResourceState):
             if not kp or self.state != self.UP:
                 if kp: self._conn.delete_key_pair(defn.keypair_name)
                 self.log("uploading EC2 key pair ‘{0}’...".format(defn.keypair_name))
-                self._conn.import_key_pair(defn.keypair_name, self.public_key)
+                self._conn.import_key_pair(defn.keypair_name, self.public_key.encode())
 
             with self.depl._db:
                 self.state = self.UP
