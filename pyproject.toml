@@ -2,6 +2,7 @@
 name = "nixopsaws"
 version = "1.7"
 description = "NixOps AWS plugin"
+homepage = "https://github.com/NixOS/nixops-aws"
 authors = ["adisbladis <adisbladis@gmail.com>"]
 license = "LGPL-3.0-only"
 include = ["nix/*.nix"]
