@@ -193,7 +193,7 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
     def get_ssh_private_key_file(self):
         if self.private_key_file: return self.private_key_file
         if self._ssh_private_key_file: return self._ssh_private_key_file
-        for r in self.depl.active_resources.itervalues():
+        for r in self.depl.active_resources.values():
             if isinstance(r, nixopsaws.resources.ec2_keypair.EC2KeyPairState) and \
                     r.state == nixopsaws.resources.ec2_keypair.EC2KeyPairState.UP and \
                     r.keypair_name == self.key_pair:
