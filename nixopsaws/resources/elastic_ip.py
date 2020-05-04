@@ -62,7 +62,7 @@ class ElasticIPState(nixops.resources.ResourceState):
 
     def connect_boto3(self, region):
         if self._conn_boto3: return self._conn_boto3
-        self._conn_boto3 = nixops.ec2_utils.connect_ec2_boto3(region, self.access_key_id)
+        self._conn_boto3 = nixopsaws.ec2_utils.connect_ec2_boto3(region, self.access_key_id)
         return self._conn_boto3
 
     def create(self, defn, check, allow_reboot, allow_recreate):
