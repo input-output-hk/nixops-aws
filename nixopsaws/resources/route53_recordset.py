@@ -122,7 +122,7 @@ class Route53RecordSetState(nixops.resources.ResourceState):
                 # We have the zoneName, find the zoneId
                 response = self.route53_retry(lambda: client.list_hosted_zones_by_name(DNSName=defn.zone_name))
                 zone_name = defn.zone_name if defn.zone_name.endswith('.') else (defn.zone_name + '.')
-                zones = filter((lambda zone: zone["Name"] == zone_name), response["HostedZones"])
+                zones = list(filter((lambda zone: zone["Name"] == zone_name), response["HostedZones"]))
                 if len(zones) == 0:
                     raise Exception("Can't find zone id")
                 elif len(zones) > 1:
