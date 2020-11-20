@@ -57,9 +57,9 @@ def fetch_aws_secret_key(access_key_id):
     # Get the first existing access-secret key pair
     credentials = next( (keys for keys in sources if keys and keys[1]), None)
 
-    # if not credentials:
-    #     raise Exception("please set $EC2_SECRET_KEY or $AWS_SECRET_ACCESS_KEY, or add the key for ‘{0}’ to ~/.ec2-keys or ~/.aws/credentials"
-    #                     .format(access_key_id))
+    if not credentials:
+        raise Exception("please set $EC2_SECRET_KEY or $AWS_SECRET_ACCESS_KEY, or add the key for ‘{0}’ to ~/.ec2-keys or ~/.aws/credentials"
+                        .format(access_key_id))
 
     return credentials
 
@@ -75,8 +75,9 @@ def connect(region, access_key_id):
 
 def connect_ec2_boto3(region, access_key_id):
     assert region
-    (access_key_id, secret_access_key) = fetch_aws_secret_key(access_key_id)
-    client = boto3.session.Session().client('ec2', region_name=region, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
+    # (access_key_id, secret_access_key) = fetch_aws_secret_key(access_key_id)
+    # client = boto3.session.Session().client('ec2', region_name=region, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
+    client = boto3.session.Session().client('ec2', region_name=region)
     return client
 
 def connect_vpc(region, access_key_id):
