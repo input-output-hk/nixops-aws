@@ -298,9 +298,10 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
             return
 
         # Get the secret access key from the environment or from ~/.ec2-keys.
-        (access_key_id, secret_access_key) = nixopsaws.ec2_utils.fetch_aws_secret_key(self.route53_access_key_id)
+        # (access_key_id, secret_access_key) = nixopsaws.ec2_utils.fetch_aws_secret_key(self.route53_access_key_id)
 
-        self._conn_route53 = boto.connect_route53(access_key_id, secret_access_key)
+        # self._conn_route53 = boto.connect_route53(access_key_id, secret_access_key)
+        self._conn_route53 = boto.connect_route53()
 
 
     def _get_spot_instance_request_by_id(self, request_id, allow_missing=False):

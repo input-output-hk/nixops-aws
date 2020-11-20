@@ -74,10 +74,11 @@ class Route53HealthCheckState(nixops.resources.ResourceState):
 
     def boto_session(self):
         if self._boto_session is None:
-            (access_key_id, secret_access_key) = nixopsaws.ec2_utils.fetch_aws_secret_key(self.access_key_id)
-            self._boto_session = boto3.session.Session(
-                                               aws_access_key_id=access_key_id,
-                                               aws_secret_access_key=secret_access_key)
+            # (access_key_id, secret_access_key) = nixopsaws.ec2_utils.fetch_aws_secret_key(self.access_key_id)
+            # self._boto_session = boto3.session.Session(
+            #                                    aws_access_key_id=access_key_id,
+            #                                    aws_secret_access_key=secret_access_key)
+            self._boto_session = boto3.session.Session()
         return self._boto_session
 
     def resolve_health_check(self, id):
