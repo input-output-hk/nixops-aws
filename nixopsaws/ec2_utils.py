@@ -57,9 +57,9 @@ def fetch_aws_secret_key(access_key_id):
     # Get the first existing access-secret key pair
     credentials = next( (keys for keys in sources if keys and keys[1]), None)
 
-    if not credentials:
-        raise Exception("please set $EC2_SECRET_KEY or $AWS_SECRET_ACCESS_KEY, or add the key for ‘{0}’ to ~/.ec2-keys or ~/.aws/credentials"
-                        .format(access_key_id))
+    # if not credentials:
+    #     raise Exception("please set $EC2_SECRET_KEY or $AWS_SECRET_ACCESS_KEY, or add the key for ‘{0}’ to ~/.ec2-keys or ~/.aws/credentials"
+    #                     .format(access_key_id))
 
     return credentials
 
