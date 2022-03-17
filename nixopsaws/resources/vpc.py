@@ -32,7 +32,8 @@ class VPCState(nixops.resources.DiffEngineResourceState, EC2CommonState):
 
     state = nixops.util.attr_property("state", nixops.resources.ResourceState.MISSING, int)
     access_key_id = nixops.util.attr_property("accessKeyId", None)
-    _reserved_keys = EC2CommonState.COMMON_EC2_RESERVED + ["vpcId", "associationId"]
+    ipv6_block = nixops.util.attr_property("ipv6CidrBlock", None)
+    _reserved_keys = EC2CommonState.COMMON_EC2_RESERVED + ["vpcId", "associationId", "ipv6CidrBlock"]
 
     @classmethod
     def get_type(cls):
@@ -66,7 +67,10 @@ class VPCState(nixops.resources.DiffEngineResourceState, EC2CommonState):
         return {('resources', 'vpc'): attr}
 
     def get_physical_spec(self):
-        return { 'vpcId': self._state.get('vpcId', None)}
+        return {
+            'vpcId': self._state.get('vpcId', None),
+            'ipv6CidrBlock': self.ipv6_block
+        }
 
     def get_definition_prefix(self):
         return "resources.vpc."
@@ -90,6 +94,7 @@ class VPCState(nixops.resources.DiffEngineResourceState, EC2CommonState):
             self._state['vpcId'] = None
             self._state['region'] = None
             self._state['cidrBlock'] = None
+            self._state['ipv6CidrBlock'] = None
             self._state['instanceTenancy'] = None
             self._state['enableDnsSupport'] = None
             self._state['enableDnsHostname'] = None
@@ -215,6 +220,7 @@ class VPCState(nixops.resources.DiffEngineResourceState, EC2CommonState):
     def realize_associate_ipv6_cidr_block(self, allow_recreate):
         config = self.get_defn()
         assign_cidr = config['amazonProvidedIpv6CidrBlock']
+        cidr_block = ""
         if assign_cidr:
             self.log("associating an amazon provided Ipv6 address to vpc {}".format(self._state["vpcId"]))
             response = self.get_client().associate_vpc_cidr_block(
@@ -231,7 +237,9 @@ class VPCState(nixops.resources.DiffEngineResourceState, EC2CommonState):
 
         with self.depl._db:
             self._state["amazonProvidedIpv6CidrBlock"] = config['amazonProvidedIpv6CidrBlock']
-            if assign_cidr: self._state['associationId'] = association_id
+            if assign_cidr:
+                self._state['associationId'] = association_id
+                self.ipv6_block = cidr_block
 
     def realize_update_tag(self, allow_recreate):
         config = self.get_defn()

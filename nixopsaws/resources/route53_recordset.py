@@ -4,6 +4,7 @@
 
 import os
 import time
+from functools import reduce
 import botocore
 import boto3
 import nixops.util
@@ -37,6 +38,7 @@ class Route53RecordSetDefinition(nixops.resources.ResourceDefinition):
         self.routing_policy = config["routingPolicy"]
         self.record_type = config["recordType"]
         self.record_values = config["recordValues"]
+        self.ip_indexes = config["ipIndexes"]
         self.health_check_id = config["healthCheckId"]
 
     def show_type(self):
@@ -157,7 +159,19 @@ class Route53RecordSetState(nixops.resources.ResourceState):
             else:
                 return v
 
-        defn.record_values = map(resolve_machine_ip , defn.record_values)
+        def resolve_machine_ipv6(v):
+            if v.startswith('res-'):
+                m = self.depl.get_machine(v[4:])
+                if not m.ipv6_addresses:
+                    raise Exception("cannot create record set for a machine that has not yet been created")
+                return [m.ipv6_addresses[index] for index in defn.ip_indexes]
+            else:
+                return [v]
+
+        if defn.record_type == "AAAA":
+            defn.record_values = reduce(list.__add__, map(resolve_machine_ipv6 , defn.record_values))
+        else:
+            defn.record_values = map(resolve_machine_ip , defn.record_values)
 
         changed = self.record_values != defn.record_values \
                or self.ttl != defn.ttl \
@@ -261,4 +275,3 @@ class Route53RecordSetState(nixops.resources.ResourceState):
                 isinstance(r, nixopsaws.resources.route53_hosted_zone.Route53HostedZoneState) or
                 isinstance(r, nixopsaws.resources.route53_health_check.Route53HealthCheckState) or
                 isinstance(r, nixops.backends.MachineState)}
-

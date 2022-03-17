@@ -33,6 +33,16 @@ with lib;
       description = ''
         The IPv6 network range for the subnet, in CIDR notation.
         The subnet size must use a /64 prefix length.
+        Set by nixops.
+      '';
+    };
+
+    ipv6CidrSubnetBlock = mkOption {
+      default = null;
+      type = types.nullOr types.str;
+      description = ''
+        The Ipv6 network range discriminant for the subnet:
+        two hexadecimal character.
       '';
     };
 
@@ -52,7 +62,7 @@ with lib;
         a public IP in launch. Default is false.
       '';
     };
-    
+
     subnetId = mkOption {
       default = "";
       type = types.str;

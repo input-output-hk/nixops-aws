@@ -67,6 +67,7 @@ class EC2Definition(MachineDefinition):
         self.use_private_ip_address = config["ec2"]["usePrivateIpAddress"]
         self.source_dest_check = config["ec2"]["sourceDestCheck"]
         self.security_group_ids = config["ec2"]["securityGroupIds"]
+        self.ipv6_address_host_parts = config["ec2"]["ipv6AddressHostParts"]
 
         # convert sd to xvd because they are equal from aws perspective
         self.block_device_mapping = {device_name_user_entered_to_stored(k): v for k, v in config["ec2"]["blockDeviceMapping"].iteritems()}
@@ -130,6 +131,9 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
     subnet_id = nixops.util.attr_property("ec2.subnetId", None)
     first_boot = nixops.util.attr_property("ec2.firstBoot", True, type=bool)
     virtualization_type = nixops.util.attr_property("ec2.virtualizationType", None)
+    ipv6_addresses = nixops.util.attr_property("ec2.ipv6Addresses", [], 'json')
+    ipv6_address_host_parts = nixops.util.attr_property("ec2.ipv6AddressHostParts", [], 'json')
+
 
     def __init__(self, depl, name, id):
         MachineState.__init__(self, depl, name, id)
@@ -171,6 +175,8 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
             self.dns_hostname = None
             self.dns_ttl = None
             self.subnet_id = None
+            self.ipv6_addresses = []
+            self.ipv6_address_host_parts = []
 
             self.client_token = None
             self.spot_instance_request_id = None
@@ -225,6 +231,7 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
             ],
             ('deployment', 'ec2', 'blockDeviceMapping'): block_device_mapping,
             ('deployment', 'ec2', 'instanceId'): self.vm_id,
+            ('deployment', 'ec2', 'ipv6Addresses'): self.ipv6_addresses,
             ('ec2', 'hvm'): self.virtualization_type == "hvm" or self.virtualization_type is None,
         }
 
@@ -709,6 +716,21 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
 
         return instance
 
+    def prefixIpv6HostParts(self, subnet_id, ipv6_address_host_parts):
+        if ipv6_address_host_parts == []:
+            return []
+        if subnet_id.startswith("res-"):
+            subnet = self.depl.get_typed_resource(subnet_id[4:].split(".")[0], "vpc-subnet")
+        else:
+            subnet = self.depl.get_typed_resource(subnet_id, "vpc-subnet")
+
+        subnetBlock = subnet.ipv6_block
+        if subnetBlock:
+            subnetBlockPrefix = subnetBlock[:-5]
+            return map(lambda hp: "{}{}".format(subnetBlockPrefix, hp), ipv6_address_host_parts)
+        else:
+            raise Exception("No ipv6 CidrBlock defined for this subnet: {}".format(subnet_id))
+
 
     def create_instance(self, defn, zone, user_data, ebs_optimized, args):
         IamInstanceProfile = {}
@@ -720,12 +742,15 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
         if defn.subnet_id != "":
             if defn.security_groups != [] and defn.security_groups != ["default"]:
                 raise Exception("‘deployment.ec2.securityGroups’ is incompatible with ‘deployment.ec2.subnetId’")
-
+            ipv6_adresses = self.prefixIpv6HostParts(defn.config["ec2"]["subnetId"], defn.ipv6_address_host_parts)
             args['NetworkInterfaces'] = [dict(
                 AssociatePublicIpAddress=defn.associate_public_ip_address,
                 SubnetId=defn.subnet_id,
                 DeviceIndex=0,
-                Groups=self.security_groups_to_ids(defn.subnet_id, defn.security_group_ids)
+                Groups=self.security_groups_to_ids(defn.subnet_id, defn.security_group_ids),
+                Ipv6Addresses=map(lambda a: dict(
+                    Ipv6Address=a
+                ), ipv6_adresses)
             )]
         else:
             args['SecurityGroups'] = defn.security_groups
@@ -1040,6 +1065,8 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
                 self.instance_profile = defn.instance_profile
                 self.client_token = None
                 self.private_host_key = None
+                self.ipv6_address_host_parts = defn.ipv6_address_host_parts
+                self.ipv6_adresses = self.prefixIpv6HostParts(defn.config["ec2"]["subnetId"], defn.ipv6_address_host_parts)
 
             # Cancel spot instance request, it isn't needed after the
             # instance has been provisioned in case of "one-time" requests
@@ -1090,6 +1117,26 @@ class EC2State(MachineState, nixopsaws.resources.ec2_common.EC2CommonState):
                     self.placement_group or "",
                     defn.placement_group)
             )
+
+        if (self.ipv6_address_host_parts != defn.ipv6_address_host_parts or check):
+            network_interface = self._retry(lambda: self._conn_boto3.describe_network_interfaces(Filters=[{ 'Name': 'attachment.instance-id', 'Values': [self.vm_id]}])['NetworkInterfaces'][0])
+            current_ipv6_addresses = map(lambda a: a['Ipv6Address'], network_interface['Ipv6Addresses'])
+            target_ipv6_addresses = self.prefixIpv6HostParts(defn.config["ec2"]["subnetId"], defn.ipv6_address_host_parts)
+
+            obsolete_ipv6_adresses = list(set(current_ipv6_addresses) - set(target_ipv6_addresses))
+            if len(obsolete_ipv6_adresses) > 0:
+                self.log("unassigning ipv6 adresses {}".format(obsolete_ipv6_adresses))
+                self._conn_boto3.unassign_ipv6_addresses(Ipv6Addresses=obsolete_ipv6_adresses, NetworkInterfaceId=network_interface['NetworkInterfaceId'])
+
+            new_ipv6_adresses = list(set(target_ipv6_addresses) - set(current_ipv6_addresses))
+            if len(new_ipv6_adresses) > 0:
+                self.log("assigning ipv6 adresses {}".format(new_ipv6_adresses))
+                self._conn_boto3.assign_ipv6_addresses(Ipv6Addresses=new_ipv6_adresses, NetworkInterfaceId=network_interface['NetworkInterfaceId'])
+
+            with self.depl._db:
+                self.ipv6_address_host_parts = defn.ipv6_address_host_parts
+                self.ipv6_addresses = target_ipv6_addresses
+
 
         # update iam instance profiles of instance
         if update_instance_profile and (self.instance_profile != defn.instance_profile or check):

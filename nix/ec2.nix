@@ -354,6 +354,24 @@ in
       '';
     };
 
+    deployment.ec2.ipv6Addresses = mkOption {
+      default = [];
+      type = types.listOf types.str;
+      description = ''
+        List of public IPv6 addresses associated with the instance.
+        Set by Nixops.
+      '';
+    };
+
+    deployment.ec2.ipv6AddressHostParts = mkOption {
+      default = [];
+      type = types.listOf types.str;
+      description = ''
+        If instance in a subnet/VPC, list of public IPv6 address suffixes (4 segments; eg: ':0:1:2:3').
+        Will be prefixed by subnet `ipv6CidrBlock` and associated with the instance.
+      '';
+    };
+
     deployment.ec2.usePrivateIpAddress = mkOption {
       default = defaultUsePrivateIpAddress;
       type = types.bool;

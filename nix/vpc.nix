@@ -26,15 +26,15 @@ with lib;
         into the VPC. Valid values are "default" and "dedicated".
       '';
     };
-    
+
     enableDnsSupport = mkOption {
       default = false;
       type = types.bool;
       description = ''
         Specifies whether the DNS server provided by Amazon is enabled for the VPC.
-      ''; 
+      '';
     };
-    
+
     enableDnsHostnames = mkOption {
       default = false;
       type = types.bool;
@@ -69,6 +69,12 @@ with lib;
       default = "";
       type = types.str;
       description = "The VPC id generated from AWS. This is set by NixOps";
+    };
+
+    ipv6CidrBlock = mkOption {
+      default = "";
+      type = types.str;
+      description = "The Amazon-provided IPv6 CIDR block with a /56 prefix length. This is set by NixOps";
     };
 
   } // import ./common-ec2-options.nix { inherit lib; };

@@ -106,6 +106,14 @@ with import ./lib.nix lib;
                        then x
                        else (if (x == null) then null else "res-" + x._name);
           };
+
+          sourceIpv6 = mkOption {
+            default = null;
+            description = ''
+              The source IP range (IPv6 CIDR notation).
+            '';
+            type = types.uniq (types.nullOr types.str);
+          };
         };
       });
     };

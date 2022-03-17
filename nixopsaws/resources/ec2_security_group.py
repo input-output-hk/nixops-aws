@@ -2,6 +2,7 @@
 
 # Automatic provisioning of EC2 security groups.
 
+from typing import Dict
 import boto.ec2.securitygroup
 import nixops.resources
 import nixops.util
@@ -30,6 +31,7 @@ class EC2SecurityGroupDefinition(nixops.resources.ResourceDefinition):
             self.vpc_id = xml.find("attrs/attr[@name='vpcId']/string").get("value")
 
         self.security_group_rules = []
+        self.security_group_rules_ipv6 = []
         for rule_xml in xml.findall("attrs/attr[@name='rules']/list/attrs"):
             ip_protocol = rule_xml.find("attr[@name='protocol']/string").get("value")
             if ip_protocol == "icmp":
@@ -41,10 +43,13 @@ class EC2SecurityGroupDefinition(nixops.resources.ResourceDefinition):
             cidr_ip_xml = rule_xml.find("attr[@name='sourceIp']/string")
             if not cidr_ip_xml is None:
                 self.security_group_rules.append([ ip_protocol, from_port, to_port, cidr_ip_xml.get("value") ])
-            else:
-                group_name = rule_xml.find("attr[@name='sourceGroup']/attrs/attr[@name='groupName']/string").get("value")
-                owner_id = rule_xml.find("attr[@name='sourceGroup']/attrs/attr[@name='ownerId']/string").get("value")
-                self.security_group_rules.append([ ip_protocol, from_port, to_port, group_name, owner_id ])
+            cidr_ipv6_xml = rule_xml.find("attr[@name='sourceIpv6']/string")
+            if not cidr_ipv6_xml is None:
+                self.security_group_rules_ipv6.append([ ip_protocol, from_port, to_port, cidr_ipv6_xml.get("value") ])
+            group_name = rule_xml.find("attr[@name='sourceGroup']/attrs/attr[@name='groupName']/string")
+            owner_id = rule_xml.find("attr[@name='sourceGroup']/attrs/attr[@name='ownerId']/string")
+            if not group_name is None and not owner_id is None:
+                self.security_group_rules.append([ ip_protocol, from_port, to_port, group_name.get("value"), owner_id.get("value") ])
 
 
     def show_type(self):
@@ -58,6 +63,7 @@ class EC2SecurityGroupState(nixops.resources.ResourceState):
     security_group_name = nixops.util.attr_property("ec2.securityGroupName", None)
     security_group_description = nixops.util.attr_property("ec2.securityGroupDescription", None)
     security_group_rules = nixops.util.attr_property("ec2.securityGroupRules", [], 'json')
+    security_group_rules_ipv6 = nixops.util.attr_property("ec2.securityGroupRulesIpv6", [], 'json')
     old_security_groups = nixops.util.attr_property("ec2.oldSecurityGroups", [], 'json')
     access_key_id = nixops.util.attr_property("ec2.accessKeyId", None)
     vpc_id = nixops.util.attr_property("ec2.vpcId", None)
@@ -69,6 +75,7 @@ class EC2SecurityGroupState(nixops.resources.ResourceState):
     def __init__(self, depl, name, id):
         super(EC2SecurityGroupState, self).__init__(depl, name, id)
         self._conn = None
+        self._conn_boto3 = None
 
     def show_type(self):
         s = super(EC2SecurityGroupState, self).show_type()
@@ -96,6 +103,11 @@ class EC2SecurityGroupState(nixops.resources.ResourceState):
         if self._conn: return
         self._conn = nixopsaws.ec2_utils.connect(self.region, self.access_key_id)
 
+    def _connect_boto3(self):
+        if self._conn_boto3: return self._conn_boto3
+        self._conn_boto3 = nixopsaws.ec2_utils.connect_ec2_boto3(self.region, self.access_key_id)
+        return self._conn_boto3
+
     def create(self, defn, check, allow_reboot, allow_recreate):
         def retry_notfound(f):
             nixopsaws.ec2_utils.retry(f, error_codes=['InvalidGroup.NotFound'])
@@ -121,28 +133,31 @@ class EC2SecurityGroupState(nixops.resources.ResourceState):
         grp = None
         if check:
             with self.depl._db:
-                self._connect()
+                conn = self._connect_boto3()
 
                 try:
                     if self.vpc_id:
-                        grp = self._conn.get_all_security_groups(group_ids=[ self.security_group_id ])[0]
+                        grp = conn.describe_security_groups(GroupIds=[ self.security_group_id ])['SecurityGroups'][0]
                     else:
-                        grp = self._conn.get_all_security_groups([ defn.security_group_name ])[0]
+                        grp = conn.describe_security_groups(GroupNames=[ defn.security_group_name ])['SecurityGroups'][0]
                     self.state = self.UP
-                    self.security_group_id = grp.id
-                    self.security_group_description = grp.description
+                    self.security_group_id = grp['GroupId']
+                    self.security_group_description = grp['Description']
                     rules = []
-                    for rule in grp.rules:
-                        for grant in rule.grants:
-                            new_rule = [ rule.ip_protocol, int(rule.from_port), int(rule.to_port) ]
-                            if grant.cidr_ip:
-                                new_rule.append(grant.cidr_ip)
-                            else:
-                                group  = nixopsaws.ec2_utils.id_to_security_group_name(self._conn, grant.groupId, self.vpc_id) if self.vpc_id else grant.groupName
-                                new_rule.append(group)
-                                new_rule.append(grant.owner_id)
-                            rules.append(new_rule)
+                    ipv6rules = []
+                    for rule in grp['IpPermissions']:
+                        protocol = rule['IpProtocol']
+                        from_port = rule['FromPort']
+                        to_port = rule['ToPort']
+                        for ipRange in rule['IpRanges']:
+                            rules.append([ protocol, from_port, to_port, ipRange['CidrIp'] ])
+                        for ipv6Range in rule['Ipv6Ranges']:
+                            ipv6rules.append([ protocol, from_port, to_port, ipv6Range['CidrIpv6'] ])
+                        for userIdGroup in rule['UserIdGroupPairs']:
+                            group  = nixopsaws.ec2_utils.id_to_security_group_name(self._conn, userIdGroup['GroupId'], self.vpc_id) if self.vpc_id else userIdGroup['GroupName']
+                            rules.append([ protocol, from_port, to_port, group, userIdGroup['UserId'] ])
                     self.security_group_rules = rules
+                    self.security_group_rules_ipv6 = ipv6rules
                 except boto.exception.EC2ResponseError as e:
                     if e.error_code == u'InvalidGroup.NotFound':
                         self.state = self.MISSING
@@ -174,17 +189,63 @@ class EC2SecurityGroupState(nixops.resources.ResourceState):
 
         new_rules = set()
         old_rules = set()
+        new_rules_ipv6 = set()
+        old_rules_ipv6 = set()
         if not security_group_was_created:  # old_rules stays {}
             for rule in self.security_group_rules:
                 old_rules.add(tuple(rule))
+            for rule in self.security_group_rules_ipv6:
+                old_rules_ipv6.add(tuple(rule))
         for rule in resolved_security_group_rules:
             tupled_rule = tuple(rule)
             if not tupled_rule in old_rules:
                 new_rules.add(tupled_rule)
             else:
                 old_rules.remove(tupled_rule)
+        for rule in defn.security_group_rules_ipv6:
+            tupled_rule = tuple(rule)
+            if not tupled_rule in old_rules_ipv6:
+                new_rules_ipv6.add(tupled_rule)
+            else:
+                old_rules_ipv6.remove(tupled_rule)
 
-        if new_rules:
+        if old_rules or old_rules_ipv6:
+            self.logger.log("removing old rules from EC2 security group ‘{0}’...".format(self.security_group_name))
+            if grp is None:
+                self._connect()
+                grp = self.get_security_group()
+
+            for rule in old_rules:
+                if len(rule) == 4:
+                    grp.revoke(ip_protocol=rule[0], from_port=rule[1], to_port=rule[2], cidr_ip=rule[3])
+                else:
+                    args = {}
+                    args['owner_id']=rule[4]
+                    if self.vpc_id:
+                        args['id']=nixopsaws.ec2_utils.name_to_security_group(self._conn, rule[3], self.vpc_id)
+                    else:
+                        args['name']=rule[3]
+                    src_group = boto.ec2.securitygroup.SecurityGroup(**args)
+                    grp.revoke(ip_protocol=rule[0], from_port=rule[1], to_port=rule[2], src_group=src_group)
+
+            if old_rules_ipv6:
+                conn = self._connect_boto3()
+                ipPermissions = map(lambda r: dict(
+                    IpProtocol=r[0],
+                    FromPort=r[1],
+                    ToPort=r[2],
+                    Ipv6Ranges=[dict(
+                        CidrIpv6=r[3]
+                    )]), old_rules_ipv6)
+
+                if self.vpc_id:
+                    res = conn.revoke_security_group_ingress(GroupId=self.security_group_id, IpPermissions=ipPermissions)
+                else:
+                    res = conn.revoke_security_group_ingress(GroupName=defn.security_group_name, IpPermissions=ipPermissions)
+                if 'UnknownIpPermissions' in res:
+                    raise Exception("could not revoke unknown ipv6 rules {}".format(res['UnknownIpPermissions']))
+
+        if new_rules or new_rules_ipv6:
             self.logger.log("adding new rules to EC2 security group ‘{0}’...".format(self.security_group_name))
             if grp is None:
                 self._connect()
@@ -206,24 +267,23 @@ class EC2SecurityGroupState(nixops.resources.ResourceState):
                     if e.error_code != u'InvalidPermission.Duplicate':
                         raise
 
-        if old_rules:
-            self.logger.log("removing old rules from EC2 security group ‘{0}’...".format(self.security_group_name))
-            if grp is None:
-                self._connect()
-                grp = self.get_security_group()
-            for rule in old_rules:
-                if len(rule) == 4:
-                    grp.revoke(ip_protocol=rule[0], from_port=rule[1], to_port=rule[2], cidr_ip=rule[3])
+            if new_rules_ipv6:
+                conn = self._connect_boto3()
+                ipPermissions = map(lambda r: dict(
+                    IpProtocol=r[0],
+                    FromPort=r[1],
+                    ToPort=r[2],
+                    Ipv6Ranges=[dict(
+                        CidrIpv6=r[3]
+                    )]), new_rules_ipv6)
+
+                if self.vpc_id:
+                    res = conn.authorize_security_group_ingress(GroupId=self.security_group_id, IpPermissions=ipPermissions)
                 else:
-                    args = {}
-                    args['owner_id']=rule[4]
-                    if self.vpc_id:
-                        args['id']=nixopsaws.ec2_utils.name_to_security_group(self._conn, rule[3], self.vpc_id)
-                    else:
-                        args['name']=rule[3]
-                    src_group = boto.ec2.securitygroup.SecurityGroup(**args)
-                    grp.revoke(ip_protocol=rule[0], from_port=rule[1], to_port=rule[2], src_group=src_group)
+                    res = conn.authorize_security_group_ingress(GroupName=defn.security_group_name, IpPermissions=ipPermissions)
+
         self.security_group_rules = resolved_security_group_rules
+        self.security_group_rules_ipv6 = defn.security_group_rules_ipv6
 
         self.state = self.UP
 

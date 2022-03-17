@@ -32,7 +32,8 @@ class VPCSubnetState(nixops.resources.DiffEngineResourceState, EC2CommonState):
 
     state = nixops.util.attr_property("state", nixops.resources.ResourceState.MISSING, int)
     access_key_id = nixops.util.attr_property("accessKeyId", None)
-    _reserved_keys = EC2CommonState.COMMON_EC2_RESERVED + ['subnetId', 'associationId']
+    ipv6_block = nixops.util.attr_property("ipv6CidrBlock", None)
+    _reserved_keys = EC2CommonState.COMMON_EC2_RESERVED + ['subnetId', 'associationId', "ipv6CidrBlock"]
 
     @classmethod
     def get_type(cls):
@@ -47,7 +48,7 @@ class VPCSubnetState(nixops.resources.DiffEngineResourceState, EC2CommonState):
                                                       after=[self.handle_create_subnet],
                                                       handle=self.realize_map_public_ip_on_launch)
         self.handle_associate_ipv6_cidr_block = Handler(
-            ['ipv6CidrBlock'],
+            ['ipv6CidrSubnetBlock'],
             after=[self.handle_create_subnet],
             handle=self.realize_associate_ipv6_cidr_block)
         self.handle_tag_update = Handler(['tags'], after=[self.handle_create_subnet], handle=self.realize_update_tag)
@@ -65,7 +66,10 @@ class VPCSubnetState(nixops.resources.DiffEngineResourceState, EC2CommonState):
         return {('resources', 'vpcSubnets'): attr}
 
     def get_physical_spec(self):
-        return {'subnetId': self.subnet_id}
+        return {
+            'subnetId': self.subnet_id,
+            'ipv6CidrBlock': self.ipv6_block
+        }
 
     def get_definition_prefix(self):
         return "resources.vpcSubnets."
@@ -168,13 +172,21 @@ class VPCSubnetState(nixops.resources.DiffEngineResourceState, EC2CommonState):
         with self.depl._db:
             self._state['mapPublicIpOnLaunch'] = config['mapPublicIpOnLaunch']
 
+    def getVpc(self, vpcId):
+        if vpcId.startswith("res-"):
+            return self.depl.get_typed_resource(vpcId[4:].split(".")[0], "vpc")
+        else:
+            return self.depl.get_typed_resource(vpcId, "vpc")
+
     def realize_associate_ipv6_cidr_block(self, allow_recreate):
         config = self.get_defn()
-
-        if config['ipv6CidrBlock'] is not None:
-            self.log("associating ipv6 cidr block {}".format(config['ipv6CidrBlock']))
+        subnetBlock = None
+        if config['ipv6CidrSubnetBlock'] is not None:
+            vpcBlockPrefix = self.getVpc(config['vpcId']).ipv6_block[:-7]
+            subnetBlock = "{}{}::/64".format(vpcBlockPrefix, config['ipv6CidrSubnetBlock'])
+            self.log("associating ipv6 cidr block {}".format(subnetBlock))
             response = self.get_client().associate_subnet_cidr_block(
-                Ipv6CidrBlock=config['ipv6CidrBlock'],
+                Ipv6CidrBlock=subnetBlock,
                 SubnetId=self._state['subnetId'])
         else:
             self.log("disassociating ipv6 cidr block")
@@ -182,8 +194,9 @@ class VPCSubnetState(nixops.resources.DiffEngineResourceState, EC2CommonState):
                 AssociationId=self._state['associationId'])
 
         with self.depl._db:
-            self._state["ipv6CidrBlock"] = config['ipv6CidrBlock']
-            if config['ipv6CidrBlock'] is not None:
+            self.ipv6_block = subnetBlock
+            self._state['ipv6CidrSubnetBlock'] = config['ipv6CidrSubnetBlock']
+            if config['ipv6CidrSubnetBlock'] is not None:
                 self._state['associationId'] = response['Ipv6CidrBlockAssociation']['AssociationId']
 
     def realize_update_tag(self, allow_recreate):
