@@ -1,16 +1,18 @@
 { nixopsSrc ? { outPath = ./.; revCount = 0; shortRev = "abcdef"; rev = "HEAD"; }
 , officialRelease ? false
 , nixpkgs ? <nixpkgs>
+, nixpkgsConfig ? {}
+, nixpkgsOverlays ? []
 }:
 
 let
-  pkgs = import nixpkgs { };
+  pkgs = import nixpkgs { config = nixpkgsConfig; overlays = nixpkgsOverlays; };
   version = "1.7" + (if officialRelease then "" else "pre${toString nixopsSrc.revCount}_${nixopsSrc.shortRev}");
 in
 
 rec {
   build = pkgs.lib.genAttrs [ "x86_64-linux" "i686-linux" "x86_64-darwin" ] (system:
-    with import nixpkgs { inherit system; };
+    with import nixpkgs { inherit system; config = nixpkgsConfig; overlays = nixpkgsOverlays; };
 
     python2Packages.buildPythonApplication rec {
       name = "nixops-aws-${version}";
